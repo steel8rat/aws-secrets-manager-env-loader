@@ -139,61 +139,6 @@ Exports: `loadSecrets`, `MissingSecretStringError`, `SecretJsonParseError`,
 `SecretKeyNotFoundError`, `SdkNotInstalledError`, and the types
 `LoadSecretsOptions`, `SecretSource`, `SecretsManagerClientLike`.
 
-## Migrating from a hardcoded loader
-
-If you have the common hand-rolled version — a fixed `SECRET_MAP`, a
-module-scope client, `Promise.all`, env-wins — the diff is:
-
-```diff
--import {
--  SecretsManagerClient,
--  GetSecretValueCommand,
--} from "@aws-sdk/client-secrets-manager";
--
--const SECRET_MAP = {
--  CHAT_BOT_TOKEN: "example/internal/chat/bot-token/sample-service",
--  CHAT_APP_TOKEN: "example/internal/chat/app-token/sample-service",
--  CHAT_SIGNING_SECRET: "example/internal/chat/signing-secret/sample-service",
--  SERVICE_API_KEY: "example/internal/service/api-key/sample-service",
--} as const;
--
--const client = new SecretsManagerClient({
--  region: process.env.AWS_REGION ?? "us-east-1",
--});
--
--async function fetchSecret(secretId: string): Promise<string> {
--  const res = await client.send(new GetSecretValueCommand({ SecretId: secretId }));
--  if (!res.SecretString) throw new Error(`secret ${secretId} has no SecretString`);
--  return res.SecretString;
--}
--
--export async function loadSecrets(): Promise<void> {
--  const missing = (Object.keys(SECRET_MAP) as (keyof typeof SECRET_MAP)[]).filter(
--    (envVar) => !process.env[envVar],
--  );
--  if (missing.length === 0) return;
--  const results = await Promise.all(
--    missing.map(async (envVar) => [envVar, await fetchSecret(SECRET_MAP[envVar])] as const),
--  );
--  for (const [envVar, value] of results) process.env[envVar] = value;
--}
-+import { loadSecrets } from "aws-secrets-manager-env-loader";
-+
-+export async function loadAppSecrets(): Promise<void> {
-+  await loadSecrets({
-+    secrets: {
-+      CHAT_BOT_TOKEN: "example/internal/chat/bot-token/sample-service",
-+      CHAT_APP_TOKEN: "example/internal/chat/app-token/sample-service",
-+      CHAT_SIGNING_SECRET: "example/internal/chat/signing-secret/sample-service",
-+      SERVICE_API_KEY: "example/internal/service/api-key/sample-service",
-+    },
-+  });
-+}
-```
-
-`@aws-sdk/client-secrets-manager` stays exactly where it already is in your
-app's `package.json` — this package just stops shipping its own copy.
-
 ## Development
 
 ```sh
