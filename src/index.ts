@@ -107,21 +107,12 @@ export class SecretKeyNotFoundError extends Error {
 /**
  * Load the mapped secrets into `process.env`.
  *
- * Behavior, deliberately matching the small boot-time loader this package was
- * extracted from:
- *
- * - **Env wins over fetch.** Any env var already set to a non-empty value is
- *   left untouched and never fetched. This lets local dev supply secrets via a
- *   `.env`-style export with no AWS credentials at all, while a deployed runtime
- *   (which has none of those set) always fetches using its execution role.
- * - **Fetch only what is missing.** Each distinct secret ID is fetched once,
- *   in parallel, even when several env vars read different keys from it.
- * - **Fail fast.** Fetching uses `Promise.all`, so if any single fetch or JSON
- *   parse fails, the whole call rejects and `process.env` is left unmodified.
- *   A service that boots with only some of its secrets is worse than one that
- *   refuses to boot. There is no partial-load mode.
- *
- * Call this once, early, and `await` it before starting your server / handler.
+ * - Env vars already set to a non-empty value are kept and never fetched. Only
+ *   `process.env` is consulted; `.env` files must be loaded beforehand.
+ * - Each distinct secret ID is fetched once, in parallel, even when several env
+ *   vars read different keys from it.
+ * - `Promise.all` semantics: any failed fetch or JSON parse rejects the whole
+ *   call and leaves `process.env` unmodified. No partial-load mode.
  */
 export async function loadSecrets(options: LoadSecretsOptions): Promise<void> {
   const { secrets, onLog = defaultLog } = options;
